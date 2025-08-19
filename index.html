@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoTracker - Portfolio Management</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .backdrop-blur { backdrop-filter: blur(12px); }
+        .glass-effect { background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(12px); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Icons (simplified SVG versions)
+        const Icon = ({ name, size = 24, className = "" }) => {
+            const icons = {
+                search: <svg width={size} height={size} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m21 21-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z" /></svg>,
+                bell: <svg width={size} height={size} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>,
+                user: <svg width={size} height={size} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z" /></svg>,
+                chart: <svg width={size} height={size} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 7.996 21 8.625 21h2.25c.621 0 1.125-.504 1.125-1.125v-8.25c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v8.25c0 .621.504 1.125 1.125 1.125h2.25c.621 0 1.125-.504 1.125-1.125V10.5" /></svg>,
+                wallet: <svg width={size} height={size} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9m18 0V6a2.25 2.25 0 0 1-2.25-2.25H5.25A2.25 2.25 0 0 1 3 6v3" /></svg>,
+                coins: <svg width={size} height={size} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" /></svg>,
+                settings: <svg width={size} height={size} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a6.759 6.759 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" /></svg>,
+                logout: <svg width={size} height={size} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" /></svg>,
+                plus: <svg width={size} height={size} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5v15m7.5-7.5h-15" /></svg>,
+                minus: <svg width={size} height={size} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.5 12h-15" /></svg>,
+                trendUp: <svg width={size} height={size} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m2.25 18 8.166-8.166a2.25 2.25 0 0 1 3.183 0l2.166 2.166a2.25 2.25 0 0 0 3.183 0l4.816-4.816M21 12v6.75a.75.75 0 0 1-.75.75h-6.75" /></svg>,
+                trendDown: <svg width={size} height={size} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m2.25 6 8.166 8.166a2.25 2.25 0 0 0 3.183 0l2.166-2.166a2.25 2.25 0 0 1 3.183 0L21 14.5M21 14.5V21h-6.5" /></svg>,
+                eye: <svg width={size} height={size} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>,
+                eyeOff: <svg width={size} height={size} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 1-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
+            };
+            return <span className={className}>{icons[name] || icons.coins}</span>;
+        };
+
+        const CryptoPortfolioApp = () => {
+            const [currentPage, setCurrentPage] = useState('login');
+            const [showPassword, setShowPassword] = useState(false);
+            const [isLogin, setIsLogin] = useState(true);
+
+            // Reusable Components
+            const Button = ({ variant = 'primary', size = 'md', children, className = '', ...props }) => {
+                const baseClasses = 'font-medium rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer';
+                const variants = {
+                    primary: 'bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl',
+                    secondary: 'border-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white',
+                    ghost: 'text-gray-400 hover:text-white hover:bg-slate-700'
+                };
+                const sizes = {
+                    sm: 'px-4 py-2 text-sm',
+                    md: 'px-6 py-3 text-base',
+                    lg: 'px-8 py-4 text-lg'
+                };
+                
+                return (
+                    <button 
+                        className={`${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`}
+                        {...props}
+                    >
+                        {children}
+                    </button>
+                );
+            };
+
+            const Input = ({ label, error, type = 'text', placeholder, className = '', ...props }) => (
+                <div className="space-y-2">
+                    {label && <label className="block text-sm font-medium text-gray-300">{label}</label>}
+                    <div className="relative">
+                        <input
+                            type={type === 'password' && showPassword ? 'text' : type}
+                            placeholder={placeholder}
+                            className={`w-full px-4 py-3 bg-slate-800 border-2 ${error ? 'border-red-500' : 'border-slate-700'} rounded-2xl text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-colors ${className}`}
+                            {...props}
+                        />
+                        {type === 'password' && (
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                            >
+                                <Icon name={showPassword ? 'eyeOff' : 'eye'} size={20} />
+                            </button>
+                        )}
+                    </div>
+                    {error && <p className="text-red-400 text-sm">{error}</p>}
+                </div>
+            );
+
+            const Card = ({ children, className = '' }) => (
+                <div className={`glass-effect backdrop-blur border border-slate-700/50 rounded-2xl shadow-xl ${className}`}>
+                    {children}
+                </div>
+            );
+
+            const Sidebar = () => (
+                <div className="w-64 glass-effect border-r border-slate-700/50 h-screen">
+                    <div className="p-6">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-500 rounded-xl flex items-center justify-center">
+                                <Icon name="coins" size={24} className="text-white" />
+                            </div>
+                            <h1 className="text-xl font-bold text-white">CryptoTracker</h1>
+                        </div>
+                        
+                        <nav className="space-y-2">
+                            {[
+                                { icon: 'chart', label: 'Dashboard', id: 'dashboard' },
+                                { icon: 'wallet', label: 'Portfolio', id: 'portfolio' },
+                                { icon: 'coins', label: 'Assets', id: 'assets' },
+                                { icon: 'settings', label: 'Settings', id: 'settings' },
+                            ].map((item) => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setCurrentPage(item.id)}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                                        currentPage === item.id 
+                                            ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                                            : 'text-gray-400 hover:text-white hover:bg-slate-700/50'
+                                    }`}
+                                >
+                                    <Icon name={item.icon} size={20} />
+                                    <span>{item.label}</span>
+                                </button>
+                            ))}
+                        </nav>
+                        
+                        <div className="absolute bottom-6 left-6 right-6">
+                            <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-slate-700/50 rounded-xl transition-all">
+                                <Icon name="logout" size={20} />
+                                <span>Logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            const Navbar = () => (
+                <div className="glass-effect border-b border-slate-700/50 px-6 py-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <h2 className="text-2xl font-bold text-white capitalize">{currentPage}</h2>
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                            <div className="relative">
+                                <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                                <input
+                                    placeholder="Search assets..."
+                                    className="pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none w-64"
+                                />
+                            </div>
+                            
+                            <button className="relative p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded-xl">
+                                <Icon name="bell" size={20} />
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"></div>
+                            </button>
+                            
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+                                    <Icon name="user" size={16} className="text-white" />
+                                </div>
+                                <span className="text-white font-medium">John Doe</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // Login/Register Page
+            const LoginPage = () => (
+                <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
+                    <Card className="w-full max-w-md p-8">
+                        <div className="text-center mb-8">
+                            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <Icon name="coins" size={32} className="text-white" />
+                            </div>
+                            <h1 className="text-3xl font-bold text-white mb-2">CryptoTracker</h1>
+                            <p className="text-gray-400">
+                                {isLogin ? 'Welcome back! Sign in to your account.' : 'Create your account to get started.'}
+                            </p>
+                        </div>
+
+                        <div className="space-y-6">
+                            <Input 
+                                label="Email" 
+                                type="email" 
+                                placeholder="Enter your email"
+                            />
+                            
+                            <Input 
+                                label="Password" 
+                                type="password" 
+                                placeholder="Enter your password"
+                            />
+                            
+                            {!isLogin && (
+                                <Input 
+                                    label="Confirm Password" 
+                                    type="password" 
+                                    placeholder="Confirm your password"
+                                />
+                            )}
+
+                            <Button 
+                                variant="primary" 
+                                size="lg" 
+                                className="w-full"
+                                onClick={() => setCurrentPage('dashboard')}
+                            >
+                                {isLogin ? 'Sign In' : 'Create Account'}
+                            </Button>
+                        </div>
+
+                        <div className="mt-6 text-center">
+                            <p className="text-gray-400">
+                                {isLogin ? "Don't have an account? " : "Already have an account? "}
+                                <button 
+                                    onClick={() => setIsLogin(!isLogin)}
+                                    className="text-blue-400 hover:text-blue-300 font-medium"
+                                >
+                                    {isLogin ? 'Sign up' : 'Sign in'}
+                                </button>
+                            </p>
+                        </div>
+                    </Card>
+                </div>
+            );
+
+            // Dashboard Page
+            const Dashboard = () => (
+                <div className="flex">
+                    <Sidebar />
+                    <div className="flex-1">
+                        <Navbar />
+                        <div className="p-6 space-y-6">
+                            {/* Portfolio Summary */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <Card className="p-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-lg font-semibold text-white">Total Portfolio</h3>
+                                        <Icon name="trendUp" className="text-green-500" size={24} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <p className="text-3xl font-bold text-white">$45,678.90</p>
+                                        <p className="flex items-center gap-2 text-green-400">
+                                            <Icon name="trendUp" size={16} />
+                                            +12.5% (+$5,089.12)
+                                        </p>
+                                    </div>
+                                </Card>
+
+                                <Card className="p-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-lg font-semibold text-white">24h Change</h3>
+                                        <Icon name="trendUp" className="text-green-500" size={24} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <p className="text-3xl font-bold text-green-400">+$1,234.56</p>
+                                        <p className="text-gray-400">+2.78%</p>
+                                    </div>
+                                </Card>
+
+                                <Card className="p-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-lg font-semibold text-white">Total Assets</h3>
+                                        <Icon name="coins" className="text-blue-500" size={24} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <p className="text-3xl font-bold text-white">12</p>
+                                        <p className="text-gray-400">Different cryptocurrencies</p>
+                                    </div>
+                                </Card>
+                            </div>
+
+                            {/* Chart Area */}
+                            <Card className="p-6">
+                                <h3 className="text-xl font-semibold text-white mb-6">Portfolio Performance</h3>
+                                <div className="h-64 bg-slate-700/30 rounded-xl flex items-center justify-center border-2 border-dashed border-slate-600">
+                                    <div className="text-center">
+                                        <Icon name="chart" className="text-gray-500 mx-auto mb-2" size={48} />
+                                        <p className="text-gray-400">Line Chart Placeholder</p>
+                                        <p className="text-sm text-gray-500">Portfolio value over time</p>
+                                    </div>
+                                </div>
+                            </Card>
+
+                            {/* Assets Table */}
+                            <Card className="p-6">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-xl font-semibold text-white">Your Assets</h3>
+                                    <Button variant="primary" size="sm">
+                                        <Icon name="plus" size={16} />
+                                        Add Asset
+                                    </Button>
+                                </div>
+                                
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr className="border-b border-slate-700">
+                                                <th className="text-left py-4 px-2 text-gray-400 font-medium">Asset</th>
+                                                <th className="text-right py-4 px-2 text-gray-400 font-medium">Price</th>
+                                                <th className="text-right py-4 px-2 text-gray-400 font-medium">24h Change</th>
+                                                <th className="text-right py-4 px-2 text-gray-400 font-medium">Holdings</th>
+                                                <th className="text-right py-4 px-2 text-gray-400 font-medium">Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {[
+                                                { name: 'Bitcoin', symbol: 'BTC', price: '$43,250.00', change: '+2.45%', holdings: '0.5234', value: '$22,625.55', positive: true },
+                                                { name: 'Ethereum', symbol: 'ETH', price: '$2,650.00', change: '-1.23%', holdings: '4.2', value: '$11,130.00', positive: false },
+                                                { name: 'Cardano', symbol: 'ADA', price: '$0.485', change: '+5.67%', holdings: '12,500', value: '$6,062.50', positive: true },
+                                            ].map((asset, i) => (
+                                                <tr key={i} className="border-b border-slate-700/50 hover:bg-slate-700/20">
+                                                    <td className="py-4 px-2">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-full flex items-center justify-center">
+                                                                <span className="text-xs font-bold text-white">{asset.symbol[0]}</span>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-white font-medium">{asset.name}</p>
+                                                                <p className="text-sm text-gray-400">{asset.symbol}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="text-right py-4 px-2 text-white font-medium">{asset.price}</td>
+                                                    <td className={`text-right py-4 px-2 font-medium ${asset.positive ? 'text-green-400' : 'text-red-400'}`}>
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <Icon name={asset.positive ? 'trendUp' : 'trendDown'} size={14} />
+                                                            {asset.change}
+                                                        </div>
+                                                    </td>
+                                                    <td className="text-right py-4 px-2 text-gray-300">{asset.holdings}</td>
+                                                    <td className="text-right py-4 px-2 text-white font-semibold">{asset.value}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </Card>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // Portfolio Detail Page
+            const PortfolioDetail = () => (
+                <div className="flex">
+                    <Sidebar />
+                    <div className="flex-1">
+                        <Navbar />
+                        <div className="p-6 space-y-6">
+                            {/* Portfolio Header */}
+                            <Card className="p-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-white mb-2">Main Portfolio</h2>
+                                        <div className="flex items-center gap-6">
+                                            <div>
+                                                <p className="text-sm text-gray-400">Total Value</p>
+                                                <p className="text-3xl font-bold text-white">$45,678.90</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-400">Profit/Loss</p>
+                                                <p className="text-xl font-semibold text-green-400 flex items-center gap-2">
+                                                    <Icon name="trendUp" size={20} />
+                                                    +$5,089.12 (12.5%)
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <Button variant="primary">
+                                            <Icon name="plus" size={16} />
+                                            Add Asset
+                                        </Button>
+                                        <Button variant="secondary">
+                                            <Icon name="minus" size={16} />
+                                            Remove Asset
+                                        </Button>
+                                    </div>
+                                </div>
+                            </Card>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                {/* Asset List */}
+                                <div className="lg:col-span-2">
+                                    <Card className="p-6">
+                                        <h3 className="text-xl font-semibold text-white mb-6">Asset Holdings</h3>
+                                        
+                                        <div className="space-y-4">
+                                            {[
+                                                { name: 'Bitcoin', symbol: 'BTC', holdings: '0.5234', value: '$22,625.55', allocation: '49.5%', change: '+2.45%', positive: true },
+                                                { name: 'Ethereum', symbol: 'ETH', holdings: '4.2', value: '$11,130.00', allocation: '24.4%', change: '-1.23%', positive: false },
+                                                { name: 'Cardano', symbol: 'ADA', holdings: '12,500', value: '$6,062.50', allocation: '13.3%', change: '+5.67%', positive: true },
+                                                { name: 'Solana', symbol: 'SOL', holdings: '75', value: '$4,125.00', allocation: '9.0%', change: '+3.21%', positive: true },
+                                                { name: 'Polkadot', symbol: 'DOT', holdings: '320', value: '$1,736.85', allocation: '3.8%', change: '-0.89%', positive: false },
+                                            ].map((asset, i) => (
+                                                <div key={i} className="flex items-center justify-between p-4 bg-slate-700/20 rounded-xl hover:bg-slate-700/30 transition-colors">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-full flex items-center justify-center">
+                                                            <span className="font-bold text-white">{asset.symbol[0]}</span>
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-white font-semibold">{asset.name}</h4>
+                                                            <p className="text-sm text-gray-400">{asset.symbol} • {asset.holdings}</p>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="text-right">
+                                                        <p className="text-white font-semibold">{asset.value}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm text-gray-400">{asset.allocation}</span>
+                                                            <span className={`text-sm font-medium ${asset.positive ? 'text-green-400' : 'text-red-400'}`}>
+                                                                {asset.change}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Card>
+                                </div>
+
+                                {/* Asset Allocation Chart */}
+                                <div className="space-y-6">
+                                    <Card className="p-6">
+                                        <h3 className="text-lg font-semibold text-white mb-6">Asset Allocation</h3>
+                                        <div className="h-48 bg-slate-700/30 rounded-xl flex items-center justify-center border-2 border-dashed border-slate-600 mb-4">
+                                            <div className="text-center">
+                                                <div className="w-16 h-16 rounded-full border-4 border-green-500 border-dashed mx-auto mb-2"></div>
+                                                <p className="text-gray-400 text-sm">Pie Chart</p>
+                                                <p className="text-xs text-gray-500">Asset allocation</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="space-y-2">
+                                            {[
+                                                { name: 'BTC', color: 'bg-orange-500', percentage: '49.5%' },
+                                                { name: 'ETH', color: 'bg-blue-500', percentage: '24.4%' },
+                                                { name: 'ADA', color: 'bg-green-500', percentage: '13.3%' },
+                                                { name: 'SOL', color: 'bg-purple-500', percentage: '9.0%' },
+                                                { name: 'DOT', color: 'bg-pink-500', percentage: '3.8%' },
+                                            ].map((item, i) => (
+                                                <div key={i} className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
+                                                        <span className="text-gray-300 text-sm">{item.name}</span>
+                                                    </div>
+                                                    <span className="text-white text-sm font-medium">{item.percentage}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Card>
+
+                                    <Card className="p-6">
+                                        <h3 className="text-lg font-semibold text-white mb-4">Quick Stats</h3>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <p className="text-sm text-gray-400">Best Performer</p>
+                                                <p className="text-green-400 font-semibold">ADA +5.67%</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-400">Worst Performer</p>
+                                                <p className="text-red-400 font-semibold">ETH -1.23%</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-400">Largest Holding</p>
+                                                <p className="text-white font-semibold">BTC (49.5%)</p>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen bg-slate-900 text-white font-sans">
+                    {currentPage === 'login' && <LoginPage />}
+                    {currentPage === 'dashboard' && <Dashboard />}
+                    {currentPage === 'portfolio' && <PortfolioDetail />}
+                    {(currentPage === 'assets' || currentPage === 'settings') && (
+                        <div className="flex">
+                            <Sidebar />
+                            <div className="flex-1">
+                                <Navbar />
+                                <div className="p-6">
+                                    <Card className="p-12 text-center">
+                                        <h2 className="text-2xl font-semibold text-white mb-4">
+                                            {currentPage.charAt(0).toUpperCase() + currentPage.slice(1)} Page
+                                        </h2>
+                                        <p className="text-gray-400">This page is coming soon...</p>
+                                    </Card>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Design System Reference */}
+                    <div className="fixed bottom-4 right-4 z-50">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCurrentPage(currentPage === 'login' ? 'dashboard' : 'login')}
+                            className="glass-effect border border-slate-600"
+                        >
+                            Switch View
+                        </Button>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<CryptoPortfolioApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
